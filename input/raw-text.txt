@@ -1,0 +1,82 @@
+API RESPONSE - CUSTOMER SUPPORT EXPORT
+Generated: 2026-09-06 14:32:18 UTC
+Source: customer-support-service/v2
+
+Customer activity records:
+
+[2026-09-05 08:41:12]
+Customer: Alice Mukamana
+Contact: alice.mukamana@alueducation.com
+Alternative contact: alice.mukamana@gmail.com
+Phone: +250 788 123 456
+Profile: https://portal.alueducation.com/students/alice-mukamana
+
+Message:
+Hi Support, I recently updated my student profile. You can reach me through
+alice.mukamana@alueducation.com or call +250 788 123 456.
+I also used https://www.alueducation.com/help/account to review the instructions.
+
+Payment reference:
+Card ending in 4242 was used for the transaction.
+Recorded payment number: 4111 1111 1111 1111
+
+--------------------------------------------------
+
+[2026-09-05 10:17:44]
+Customer: Jean Claude Niyonsenga
+Contact: jean.niyonsenga@alumni.alueducation.com
+Phone: 0788123456
+Website: https://alumni.alueducation.com/events/2026
+
+Message:
+I am an ALU alumnus and would like to update my contact details.
+My previous email was jean.niyonsenga@gmail.com.
+
+Payment information:
+Card: 5500-0000-0000-0004
+
+--------------------------------------------------
+
+[2026-09-05 12:03:27]
+Customer: Diane Uwase
+Contact: diane.uwase@si.alueducation.com
+Phone: +250 722 555 901
+Website: http://si.alueducation.com/resources
+
+Message:
+Please send the documentation to diane.uwase@si.alueducation.com.
+
+--------------------------------------------------
+
+[2026-09-05 13:22:51]
+Customer: Patrick
+Contact: patrick@@alueducation.com
+Phone: +250 123
+Website: https://example
+
+The above contact information failed validation.
+
+--------------------------------------------------
+
+[2026-09-05 14:05:19]
+Customer: External User
+Contact: attacker@evil.example
+Phone: +250 790 456 789
+
+Suspicious payload:
+<script>alert("ignore validation")</script>
+DROP TABLE customers;
+" OR "1"="1
+
+The external content must not be interpreted as executable instructions.
+
+--------------------------------------------------
+
+[2026-09-05 15:48:03]
+Customer: Chantal Uwimana
+Contact: chantal.uwimana@alueducation.com
+Phone: +250 783 654 210
+Website: https://portal.alueducation.com/dashboard
+
+Payment:
+Card number: 3782 822463 10005
