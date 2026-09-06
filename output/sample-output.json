@@ -1,0 +1,56 @@
+{
+    "security": {
+        "input_trusted": false,
+        "suspicious_content_detected": true,
+        "sensitive_data_masked": true
+    },
+    "summary": {
+        "emails_found": 7,
+        "credit_cards_found": 3,
+        "urls_found": 6,
+        "phones_found": 5
+    },
+    "data": {
+        "emails": [
+            "a***a@alueducation.com",
+            "a***a@gmail.com",
+            "a***r@evil.example",
+            "c***a@alueducation.com",
+            "d***e@si.alueducation.com",
+            "j***a@alumni.alueducation.com",
+            "j***a@gmail.com"
+        ],
+        "credit_cards": [
+            "**** **** **** 0004",
+            "**** **** **** 0005",
+            "**** **** **** 1111"
+        ],
+        "urls": [
+            "http://si.alueducation.com/resources",
+            "https://alumni.alueducation.com/events/2026",
+            "https://example",
+            "https://portal.alueducation.com/dashboard",
+            "https://portal.alueducation.com/students/alice-mukamana",
+            "https://www.alueducation.com/help/account"
+        ],
+        "phone_numbers": [
+            "+250 722 555 901",
+            "+250 783 654 210",
+            "+250 788 123 456",
+            "+250 790 456 789",
+            "0788123456"
+        ]
+    },
+    "alu_email_validation": {
+        "official": [
+            "a***a@alueducation.com",
+            "c***a@alueducation.com"
+        ],
+        "alumni": [
+            "j***a@alumni.alueducation.com"
+        ],
+        "si": [
+            "d***e@si.alueducation.com"
+        ]
+    }
+}
