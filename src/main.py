@@ -4,207 +4,118 @@ import json
 import re
 from pathlib import Path
 
-
 INPUT_FILE = Path(__file__).parent.parent / "input" / "raw-text.txt"
-OUTPUT_FILE = Path(__file__).parent.parent / "output" / "sample-output.json"
+OUTPUT_FILE = Path(__file__).parent.parent / "output" / "sample-output.json" 
 
+# regex pattern for the each of the datatypes the user will be extracting from the rawtext file
+EMAIL_RE = re.compile(r"\b[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b")
+CARD_RE = re.compile(r"\b(?:\d[ -]?){13,18}\d\b")  # for checking if is 13-19 digit sequences,space/hyphen separated
+URL_RE = re.compile(r"https?://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]*)?")
+PHONE_RE = re.compile(r"(?<!\d)(?:\+250[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}|0\d{9})(?!\d)")  # this is for checking if it the rwandan formats
 
-# this is Email pattern part, it requires a valid local part, @ symbol, domain and top-level domain.
-EMAIL_PATTERN = re.compile(
-    r"\b[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
-    r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b"
-)
+ALU_DOMAIN = ("alueducation.com", "alumi.alueducation.com", "alueducation.org", "alueducation.com" , "si.alueducation.com")
 
+# this the part that indicates a malicious or untrusted payload and dectects but it never executed
 
-# this is credit-card pattern session it Supports common  13-19 digit card numbers separated by spaces or hyphens.
-CARD_PATTERN = re.compile(
-    r"\b(?:\d[ -]?){13,18}\d\b"
-)
-
-
-# this is URL pattern part this Matches HTTP and HTTPS URLs.
-URL_PATTERN = re.compile(
-    r"https?://[A-Za-z0-9.-]+"
-    r"(?:/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]*)?"
-)
-
-
-# this is Phone pattern which Supports common Rwandan phone formats.
-PHONE_PATTERN = re.compile(
-    r"(?<!\d)(?:\+250[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}"
-    r"|0\d{9})(?!\d)"
-)
-
-# this is ALU-specific email domains provided here
-ALU_DOMAINS = (
-    "@alueducation.com",
-    "@alumni.alueducation.com",
-    "@si.alueducation.com",
-)
-
-# this is Suspicious content indicators these are treated as unsafe input and are not executed or interpreted.
-SUSPICIOUS_PATTERNS = [
-    re.compile(r"<\s*script\b", re.IGNORECASE),
-    re.compile(r"\bDROP\s+TABLE\b", re.IGNORECASE),
-    re.compile(r"\bUNION\s+SELECT\b", re.IGNORECASE),
-    re.compile(r"\b(?:OR|AND)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+",
-               re.IGNORECASE),
+SUSPICIOUS_RE = [
+    re.compile(r"<\s*script\b", re.I),
+    re.compile(r"\bDROP\s+TABLE\b", re.I),
+    re.compile(r"\bUNION\s+SELECT\b", re.I),
+    re.compile(r"\b(?:OR|AND)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+", re.I),
 ]
 
-#these are functions for implementing the above variables
+#  this turns true when the suspicious regex patterns are found in the input broo
+is_safe_input = lambda text: not any(p.search(text) for p in SUSPICIOUS_RE)
 
-def is_safe_input(text):
-    """ this Return False when obvious malicious payloads are detected."""
-    return not any(pattern.search(text) for pattern in SUSPICIOUS_PATTERNS)
-
-def normalize_card(card):
-    """  this Remove spaces and hyphens from a card number."""
-    return re.sub(r"[ -]", "", card)
+# for the string space, hyphens and the card number be plain digit string
+normalize_card = lambda card: re.sub(r"[ -]", "", card)
 
 def is_valid_card(card):
-    """
-      this Validate a card using basic length and Luhn checksum rules.
-    """
+    """ checking the lenght and then run the luhn checksum to filter ouot non real card numbers"""
     digits = normalize_card(card)
-
     if not digits.isdigit() or not 13 <= len(digits) <= 19:
         return False
 
     total = 0
-    reverse_digits = digits[::-1]
-
-    for index, digit in enumerate(reverse_digits):
-        number = int(digit)
-
-        if index % 2 == 1:
-            number *= 2
-            if number > 9:
-                number -= 9
-
-        total += number
-
+    for i, d in enumerate(digits[::-1]): # processing the right to left
+        n = int(d) * 2 if i % 2 else int(d) # double every second digit from the right
+        total += n - 9 if n > 9 else n #substract 9 if doubling pushed it past 9
     return total % 10 == 0
 
-
 def mask_email(email):
-    """  this Mask an email to avoid unnecessary exposure."""
-    username, domain = email.split("@", 1)
-
-    if len(username) <= 2:
-        masked_username = "*" * len(username)
-    else:
-        masked_username = username[0] + "***" + username[-1]
-
-    return f"{masked_username}@{domain}"
-
+    """keep first and last char of the local part, hide the rest with asterisks, and keep the domain intact"""
+    user, domain = email.split("@", 1)
+    masked = "*" * len(user) if len(user) <= 2 else f"{user[0]}***{user[-1]}"
+    return f"{masked}@{domain}"
 
 def mask_card(card):
-    """ this Return only the last four digits of a card number."""
-    digits = normalize_card(card)
-    return f"**** **** **** {digits[-4:]}"
+    """reduce the card number to just its last 4 digits only"""
+    return f"**** **** **** {normalize_card(card)[-4:]}"
 
-
-def extract_emails(text):
-    """ this Extract valid email addresses."""
-    return sorted(set(EMAIL_PATTERN.findall(text)))
-
+# simple regex extraction and dedupe helpers
+extract_emails = lambda text: sorted(set(EMAIL_RE.findall(text)))
+extract_urls = lambda text: sorted(set(URL_RE.findall(text)))
+extract_phones = lambda text: sorted(set(PHONE_RE.findall(text)))
 
 def extract_cards(text):
-    """ this Extract and validate credit card numbers."""
-    matches = CARD_PATTERN.findall(text)
-
-    valid_cards = []
-
-    for card in matches:
-        if is_valid_card(card):
-            valid_cards.append(mask_card(card))
-
-    return sorted(set(valid_cards))
-
-
-def extract_urls(text):
-    """ this Extract HTTP and HTTPS URLs."""
-    return sorted(set(URL_PATTERN.findall(text)))
-
-
-def extract_phones(text):
-    """ this Extract valid-looking Rwandan phone numbers."""
-    return sorted(set(PHONE_PATTERN.findall(text)))
-
+    """find card like number sequences and keep only the luhn valid ones and then mask them"""
+    return sorted({mask_card(c) for c in CARD_RE.findall(text) if is_valid_card(c)})
 
 def classify_alu_emails(emails):
-    """ this Classify emails according to ALU's official domains."""
-    official = []
-    alumni = []
-    si = []
-
+    """sorting the ALU emails into the official , alumni ,si buckets based on their domain suffix."""
+    buckets = {"official": [], "alumni": [], "si": []}
     for email in emails:
-        lower_email = email.lower()
-
-        if lower_email.endswith("@alueducation.com"):
-            official.append(mask_email(email))
-
-        elif lower_email.endswith("@alumni.alueducation.com"):
-            alumni.append(mask_email(email))
-
-        elif lower_email.endswith("@si.alueducation.com"):
-            si.append(mask_email(email))
-
-    return {
-        "official": sorted(set(official)),
-        "alumni": sorted(set(alumni)),
-        "si": sorted(set(si)),
-    }
-
+        lower = email.lower()
+        # this part for for hecking alumni/si before official since their domains also end in "alueducation.com"
+        for key, domain in zip(("alumni", "si", "official"),
+                                ("alumni.alueducation.com", "si.alueducation.com", "alueducation.com")):
+            if lower.endswith("@" + domain):
+                buckets[key].append(mask_email(email))
+                break
+    return {k: sorted(set(v)) for k, v in buckets.items()}
 
 def main():
-    """ this Read input, extract data and save structured results."""
-
+    """part of read input extract/mask sensitive data and write the JSON report."""
     text = INPUT_FILE.read_text(encoding="utf-8")
 
     safe = is_safe_input(text)
-
     if not safe:
-        print("Warning: suspicious content detected in input.")
-        print("The suspicious content will not be executed or trusted.")
+        print("Warning: suspicious content detected in input. Not executed or trusted.")
 
     emails = extract_emails(text)
     cards = extract_cards(text)
     urls = extract_urls(text)
     phones = extract_phones(text)
 
-    alu_emails = classify_alu_emails(emails)
-
     results = {
+        # flags describing how the input was handled
         "security": {
-            "input_trusted": False,
+            "input_trusted": False, # raw input is never trusted, even if it looks safe
             "suspicious_content_detected": not safe,
             "sensitive_data_masked": True,
-        },
+        }, 
         "summary": {
             "emails_found": len(emails),
             "credit_cards_found": len(cards),
             "urls_found": len(urls),
             "phones_found": len(phones),
-        },
+        }, 
         "data": {
-            "emails": [mask_email(email) for email in emails],
+            "emails": [mask_email(e) for e in emails],
             "credit_cards": cards,
             "urls": urls,
             "phone_numbers": phones,
-        },
-        "alu_email_validation": alu_emails,
+        }, 
+        "alu_email_validation": classify_alu_emails(emails),
     }
 
+    # ensure the output directory exists and write the results to the disk
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-    OUTPUT_FILE.write_text(
-        json.dumps(results, indent=4),
-        encoding="utf-8"
-    )
-
+    OUTPUT_FILE.write_text(json.dumps(results, indent=4), encoding="utf-8")
     print(json.dumps(results, indent=4))
 
-
+# only run the main() when this file is executed directly(not on import)
 if __name__ == "__main__":
     main()
+
+
